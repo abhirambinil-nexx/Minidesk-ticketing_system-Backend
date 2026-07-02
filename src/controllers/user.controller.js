@@ -118,3 +118,19 @@ export async function changeUserRole(req, res) {
     });
   }
 }
+
+export async function getAgents(req, res) {
+  try {
+    const agents = await userService.getAgents();
+
+    res.status(200).json({
+      success: true,
+      data: agents,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+}

@@ -1,12 +1,35 @@
 import * as ticketService from "../services/ticket.service.js";
+import Ticket from "../models/Ticket.js";
+import Tag from "../models/Tag.js";
 
 export const createTicket = async (req, res) => {
   try {
-    const ticket = await ticketService.create(req.body, req.user);
+    // Remove schema.parse() — just use req.body directly
+    const { tags, ...ticketData } = req.body;
+
+    // Create ticket
+    const ticket = await ticketService.create(ticketData, req.user);
+
+    // Attach tags if provided
+    if (tags && tags.length > 0) {
+      const tagRecords = await Tag.findAll({
+        where: { id: tags },
+      });
+      await ticket.setTags(tagRecords);
+    }
+
+    // Fetch with tags and relationships
+    const ticketWithTags = await Ticket.findByPk(ticket.id, {
+      include: [
+        { association: "requester", attributes: ["id", "name"] },  // ← removed email
+        { association: "assignee", attributes: ["id", "name"] },   // ← removed email
+        { association: "tags" },
+      ],
+    });
 
     res.status(201).json({
       success: true,
-      data: ticket,
+      data: ticketWithTags,
     });
   } catch (error) {
     res.status(400).json({

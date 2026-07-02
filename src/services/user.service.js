@@ -87,6 +87,19 @@ class UserService {
 
     return user;
   }
+  async getAgents() {
+    const agents = await userRepository.findAgents();
+
+    return agents.map((agent) => {
+      const data = agent.toJSON();
+
+      return {
+        id: data.id,
+        name: data.name,
+        role: data.role,
+      };
+    });
+  }
 }
 
 export default new UserService();

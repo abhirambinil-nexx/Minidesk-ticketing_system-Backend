@@ -1,4 +1,5 @@
 import User from "../models/User.js";
+import { Op } from "sequelize";
 
 class UserRepository {
   async findAll() {
@@ -65,13 +66,23 @@ class UserRepository {
     return user;
   }
 
-
   async findByEmailHash(emailHash) {
-    return await User.findOne({ 
-      where: { email_hash: emailHash } 
+    return await User.findOne({
+      where: { email_hash: emailHash },
+    });
+  }
+
+  async findAgents() {
+    return await User.findAll({
+      where: {
+        isActive: true,
+        role: {
+          [Op.in]: ["agent", "admin"],
+        },
+      },
+      attributes: ["id", "name", "role"],
+      order: [["name", "ASC"]],
     });
   }
 }
-
-
 export default new UserRepository();

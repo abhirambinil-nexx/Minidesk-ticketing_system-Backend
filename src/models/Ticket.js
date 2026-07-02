@@ -10,7 +10,6 @@ const Ticket = sequelize.define(
       autoIncrement: true,
       primaryKey: true,
     },
-
     title: {
       type: DataTypes.STRING,
       allowNull: false,
@@ -18,12 +17,10 @@ const Ticket = sequelize.define(
         notEmpty: true,
       },
     },
-
     description: {
       type: DataTypes.TEXT,
       allowNull: false,
     },
-
     status: {
       type: DataTypes.ENUM(
         "open",
@@ -34,25 +31,29 @@ const Ticket = sequelize.define(
       ),
       defaultValue: "open",
     },
-
     priority: {
       type: DataTypes.ENUM("low", "medium", "high", "urgent"),
       defaultValue: "medium",
     },
-
     category: {
       type: DataTypes.STRING,
       allowNull: true,
     },
-
     requesterId: {
       type: DataTypes.INTEGER,
       allowNull: false,
+      references: {
+        model: User,
+        key: "id",
+      },
     },
-
     assigneeId: {
       type: DataTypes.INTEGER,
       allowNull: true,
+      references: {
+        model: User,
+        key: "id",
+      },
     },
   },
   {
@@ -60,5 +61,7 @@ const Ticket = sequelize.define(
     timestamps: true,
   },
 );
+
+
 
 export default Ticket;

@@ -10,6 +10,7 @@ import {
   activateUser,
   deactivateUser,
   changeUserRole,
+  getAgents,
 } from "../controllers/user.controller.js";
 
 const router = express.Router();
@@ -25,6 +26,8 @@ router.get("/admin", authenticate, authorize("admin"), (req, res) => {
 });
 
 router.get("/", authenticate, authorize("admin"), getAllUsers);
+
+router.get("/agents", authenticate, authorize("admin", "agent"), getAgents);
 
 router.get("/:id", authenticate, authorize("admin"), getUserById);
 

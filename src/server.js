@@ -5,6 +5,9 @@ import sequelize from "./config/database.js";
 import "./models/User.js";
 import "./models/RefreshToken.js";
 import "./config/redis.js";
+import "./models/Tag.js";
+import "./models/TicketTag.js";
+import "./models/index.js";
 
 const PORT = process.env.PORT || 5000;
 
