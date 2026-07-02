@@ -26,9 +26,11 @@ export const create = async (data, user) => {
   return ticket;
 };
 
-export const getAll = async (user) => {
+export const getAll = async (user, filters = {}) => {
   const cacheKey =
-    user.role === "requester" ? `tickets:requester:${user.id}` : "tickets:all";
+    user.role === "requester"
+      ? `tickets:requester:${user.id}:${JSON.stringify(filters)}`
+      : `tickets:all:${JSON.stringify(filters)}`;
 
   // Check Redis first
   const cachedTickets = await redisClient.get(cacheKey);
@@ -38,20 +40,20 @@ export const getAll = async (user) => {
     return JSON.parse(cachedTickets);
   }
 
-  let tickets;
+  let result;
 
   if (user.role === "requester") {
-    tickets = await getRequesterTickets(user.id);
+    result = await getRequesterTickets(user.id, filters);
   } else {
-    tickets = await getAllTickets();
+    result = await getAllTickets(filters);
   }
 
-  // Store in Redis for 60 seconds
-  await redisClient.setEx(cacheKey, 60, JSON.stringify(tickets));
+  // Cache for 60 seconds
+  await redisClient.setEx(cacheKey, 60, JSON.stringify(result));
 
   console.log("💾 Tickets cached in Redis");
 
-  return tickets;
+  return result;
 };
 
 export const getOne = async (id) => {

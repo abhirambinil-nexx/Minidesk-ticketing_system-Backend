@@ -21,8 +21,8 @@ export const createTicket = async (req, res) => {
     // Fetch with tags and relationships
     const ticketWithTags = await Ticket.findByPk(ticket.id, {
       include: [
-        { association: "requester", attributes: ["id", "name"] },  // ← removed email
-        { association: "assignee", attributes: ["id", "name"] },   // ← removed email
+        { association: "requester", attributes: ["id", "name"] }, // ← removed email
+        { association: "assignee", attributes: ["id", "name"] }, // ← removed email
         { association: "tags" },
       ],
     });
@@ -41,11 +41,11 @@ export const createTicket = async (req, res) => {
 
 export const getTickets = async (req, res) => {
   try {
-    const tickets = await ticketService.getAll(req.user);
+    const result = await ticketService.getAll(req.user, req.query);
 
     res.json({
       success: true,
-      data: tickets,
+      ...result,
     });
   } catch (error) {
     res.status(500).json({
