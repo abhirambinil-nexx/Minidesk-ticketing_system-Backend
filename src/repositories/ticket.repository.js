@@ -165,3 +165,112 @@ export const deleteTicket = async (id) => {
 
   return true;
 };
+
+// =============================================
+// Get Tickets By Space
+// =============================================
+
+export const getTicketsBySpace = async (spaceId, filters = {}) => {
+  const where = {
+    spaceId,
+  };
+
+  const include = [
+    {
+      association: "requester",
+      attributes: ["id", "name"],
+    },
+    {
+      association: "assignee",
+      attributes: ["id", "name"],
+    },
+    {
+      association: "tags",
+    },
+  ];
+
+  // Status Filter
+  if (filters.status) {
+    where.status = {
+      [Op.in]: filters.status.split(","),
+    };
+  }
+
+  // Priority Filter
+  if (filters.priority) {
+    where.priority = {
+      [Op.in]: filters.priority.split(","),
+    };
+  }
+
+  // Search
+  if (filters.search) {
+    where[Op.or] = [
+      {
+        title: {
+          [Op.like]: `%${filters.search}%`,
+        },
+      },
+      {
+        description: {
+          [Op.like]: `%${filters.search}%`,
+        },
+      },
+    ];
+  }
+
+  // Pagination
+  const page = parseInt(filters.page) || 1;
+  const limit = parseInt(filters.limit) || 20;
+  const offset = (page - 1) * limit;
+
+  // Sorting
+  const allowedFields = [
+    "createdAt",
+    "updatedAt",
+    "priority",
+    "status",
+    "title",
+  ];
+
+  let sortField = "createdAt";
+  let sortOrder = "DESC";
+
+  if (filters.sort) {
+    const [field, order] = filters.sort.split(":");
+
+    if (allowedFields.includes(field)) {
+      sortField = field;
+    }
+
+    if (["ASC", "DESC"].includes((order || "").toUpperCase())) {
+      sortOrder = order.toUpperCase();
+    }
+  }
+
+  const result = await Ticket.findAndCountAll({
+    where,
+    include,
+    distinct: true,
+    limit,
+    offset,
+    order: [[sortField, sortOrder]],
+  });
+
+  return {
+    data: result.rows,
+    pagination: {
+      total: result.count,
+      page,
+      limit,
+      totalPages: Math.ceil(result.count / limit),
+    },
+  };
+};
+export const countBySpace = async (spaceId) => {
+  return await Ticket.count({
+    where: {
+      spaceId,
+    },
+  });
+};

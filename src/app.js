@@ -10,6 +10,7 @@ import dashboardRoutes from "./routes/dashboard.routes.js";
 import googleRoutes from "./routes/google.routes.js";
 import tagRoutes from "./routes/tag.routes.js";
 import cookieParser from "cookie-parser";
+import spaceRoutes from "./routes/space.routes.js";
 
 const app = express();
 
@@ -27,7 +28,7 @@ app.use("/api/tickets", statusHistoryRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/oauth", googleRoutes);  // renamed from /api/auth to avoid conflict
 app.use("/api/tags", tagRoutes);
-
+app.use("/api/spaces", spaceRoutes);
 app.get("/", (req, res) => {
   res.json({
     message: "MiniDesk API Running 🚀",

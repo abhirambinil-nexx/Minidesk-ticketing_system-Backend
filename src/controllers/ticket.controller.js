@@ -127,3 +127,30 @@ export const deleteTicket = async (req, res) => {
     });
   }
 };
+
+// =============================================
+// Get Tickets By Space
+// GET /api/spaces/:key/tickets
+// =============================================
+
+export const getTicketsBySpace = async (req, res) => {
+  try {
+    const { key } = req.params;
+
+    const result = await ticketService.getBySpace(key, req.query);
+
+    return res.status(200).json({
+      success: true,
+      message: "Space tickets fetched successfully.",
+      data: result.data,
+      pagination: result.pagination,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to fetch space tickets.",
+    });
+  }
+};

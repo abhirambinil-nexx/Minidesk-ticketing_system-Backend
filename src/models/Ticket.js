@@ -10,6 +10,11 @@ const Ticket = sequelize.define(
       autoIncrement: true,
       primaryKey: true,
     },
+    ticketKey: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true,
+    },
     title: {
       type: DataTypes.STRING,
       allowNull: false,
@@ -55,13 +60,19 @@ const Ticket = sequelize.define(
         key: "id",
       },
     },
+    spaceId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: "spaces",
+        key: "id",
+      },
+    },
   },
   {
     tableName: "tickets",
     timestamps: true,
   },
 );
-
-
 
 export default Ticket;
