@@ -6,6 +6,7 @@ import {
   updateTicket,
   deleteTicket,
   getTicketsBySpace,
+  countBySpace,
 } from "../repositories/ticket.repository.js";
 
 import * as statusHistoryService from "./statusHistory.service.js";
@@ -47,8 +48,7 @@ export const create = async (data, user) => {
     ...data,
     requesterId: user.id,
     ticketKey,
-  });
-
+  });                                                       
   await redisClient.del("dashboard:stats");
   await redisClient.del("tickets:all");
   await redisClient.del(`tickets:requester:${user.id}`);
