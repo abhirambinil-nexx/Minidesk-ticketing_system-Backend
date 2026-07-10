@@ -38,6 +38,10 @@ export const authenticate = async (req, res, next) => {
     }
 
     req.user = user;
+    req.auth = {
+      tokenUserId: decoded.id,
+      tokenRole: decoded.role,
+    };
     next();
   } catch (error) {
     return res.status(401).json({ message: "Invalid or expired token" });

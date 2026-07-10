@@ -130,6 +130,10 @@ export const getAllTickets = async (filters = {}) => {
 export const getTicketById = async (id) => {
   return await Ticket.findByPk(id, {
     include: [
+      {
+        association: "space",
+        attributes: ["id", "name", "key"],
+      },
       { association: "requester", attributes: ["id", "name"] },
       { association: "assignee", attributes: ["id", "name"] },
       { association: "tags" },

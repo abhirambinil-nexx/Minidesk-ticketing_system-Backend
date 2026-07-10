@@ -1,5 +1,6 @@
 import Ticket from "../models/Ticket.js";
-import { Op } from "sequelize";
+import Space from "../models/Space.js";
+import { Op, literal } from "sequelize";
 
 export const getDashboardStats = async () => {
   const total = await Ticket.count();
@@ -50,4 +51,34 @@ export const getDashboardStats = async () => {
     urgent,
     recentTickets,
   };
+};
+
+export const getAssignedTickets = async (userId) => {
+  return await Ticket.findAll({
+    where: {
+      assigneeId: userId,
+    },
+    attributes: ["id", "ticketKey", "title", "priority", "status", "dueDate"],
+    include: [
+      {
+        model: Space,
+        as: "space",
+        attributes: ["name", "key"],
+      },
+    ],
+    order: [
+      ["dueDate", "ASC"],
+      [
+        literal(`CASE priority
+          WHEN 'urgent' THEN 1
+          WHEN 'high' THEN 2
+          WHEN 'medium' THEN 3
+          WHEN 'low' THEN 4
+          ELSE 5
+        END`),
+        "ASC",
+      ],
+      ["updatedAt", "DESC"],
+    ],
+  });
 };

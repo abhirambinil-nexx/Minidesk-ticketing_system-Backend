@@ -2,24 +2,60 @@
 import * as repository from "../repositories/dashboard.repository.js";
 import redisClient from "../config/redis.js";
 
-export const getDashboard = async () => {
-  const cacheKey = "dashboard:stats";
+const clearAssignedTicketsCache = async () => {
+  const keys = await redisClient.keys("dashboard:assigned:*");
+  if (keys.length > 0) {
+    await redisClient.del(keys);
+  }
+};
+
+export const getDashboard = async (user) => {
+  const statsCacheKey = "dashboard:stats";
+  const assignedCacheKey = `dashboard:assigned:${user.id}`;
 
   // Check Redis first
-  const cachedData = await redisClient.get(cacheKey);
+  const [cachedStats, cachedAssigned] = await Promise.all([
+    redisClient.get(statsCacheKey),
+    redisClient.get(assignedCacheKey),
+  ]);
 
-  if (cachedData) {
+  if (cachedStats && cachedAssigned) {
     console.log("⚡ Dashboard served from Redis");
-    return JSON.parse(cachedData);
+    return {
+      ...JSON.parse(cachedStats),
+      assignedTickets: JSON.parse(cachedAssigned),
+    };
   }
 
   // Fetch from MySQL
-  const dashboard = await repository.getDashboardStats();
+  const [dashboard, assignedTickets] = await Promise.all([
+    cachedStats ? JSON.parse(cachedStats) : repository.getDashboardStats(),
+    cachedAssigned ? JSON.parse(cachedAssigned) : repository.getAssignedTickets(user.id),
+  ]);
 
   // Cache for 60 seconds
-  await redisClient.setEx(cacheKey, 60, JSON.stringify(dashboard));
+  await Promise.all([
+    cachedStats
+      ? Promise.resolve()
+      : redisClient.setEx(statsCacheKey, 60, JSON.stringify(dashboard)),
+    cachedAssigned
+      ? Promise.resolve()
+      : redisClient.setEx(
+          assignedCacheKey,
+          60,
+          JSON.stringify(assignedTickets),
+        ),
+  ]);
 
   console.log("💾 Dashboard cached in Redis");
 
-  return dashboard;
+  return {
+    ...dashboard,
+    assignedTickets,
+  };
+};
+
+export const invalidateDashboardCache = async () => {
+  await redisClient.del("dashboard:stats");
+  await clearAssignedTicketsCache();
 };

@@ -1,4 +1,5 @@
 import * as ticketService from "../services/ticket.service.js";
+import * as activityService from "../services/activity.service.js";
 import Ticket from "../models/Ticket.js";
 import Tag from "../models/Tag.js";
 
@@ -16,6 +17,15 @@ export const createTicket = async (req, res) => {
         where: { id: tags },
       });
       await ticket.setTags(tagRecords);
+
+      await activityService.createActivity({
+        ticketId: ticket.id,
+        userId: req.user?.id,
+        action: "tags_added",
+        field: "tags",
+        newValue: tagRecords.map((tag) => tag.name).join(", "),
+        user: req.user,
+      });
     }
 
     // Fetch with tags and relationships

@@ -2,7 +2,7 @@ import * as dashboardService from "../services/dashboard.service.js";
 
 export const getDashboard = async (req, res) => {
   try {
-    const dashboard = await dashboardService.getDashboard();
+    const dashboard = await dashboardService.getDashboard(req.user);
 
     res.status(200).json({
       success: true,

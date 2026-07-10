@@ -44,6 +44,14 @@ const Ticket = sequelize.define(
       type: DataTypes.STRING,
       allowNull: true,
     },
+    dueDate: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    startDate: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
     requesterId: {
       type: DataTypes.INTEGER,
       allowNull: false,
