@@ -6,11 +6,14 @@ class GoogleController {
       const { idToken } = req.body;
 
       if (!idToken) {
-        return res.status(400).json({ error: "idToken is required." });
+        return res.status(400).json({
+          error: "idToken is required.",
+        });
       }
 
-      const { user, tokens } =
-        await googleService.authenticateWithGoogle(idToken);
+      const { user, tokens } = await googleService.authenticateWithGoogle(
+        idToken,
+      );
 
       res.cookie("refreshToken", tokens.refreshToken, {
         httpOnly: true,
@@ -19,7 +22,7 @@ class GoogleController {
         maxAge: 30 * 24 * 60 * 60 * 1000,
       });
 
-      res.status(200).json({
+      return res.status(200).json({
         message: "Google login successful",
         accessToken: tokens.accessToken,
         user: {
@@ -32,13 +35,20 @@ class GoogleController {
     } catch (error) {
       console.error("Google Auth Error:", error.message);
 
-      if (error.message.includes("deactivated")) {
-        return res.status(403).json({ error: error.message });
+      if (
+        error.message.includes("deactivated") ||
+        error.message.includes("Invitation") ||
+        error.message.includes("expired") ||
+        error.message.includes("already accepted")
+      ) {
+        return res.status(403).json({
+          error: error.message,
+        });
       }
 
-      res
-        .status(401)
-        .json({ error: "Google authentication failed. Please try again." });
+      return res.status(401).json({
+        error: "Google authentication failed. Please try again.",
+      });
     }
   }
 }

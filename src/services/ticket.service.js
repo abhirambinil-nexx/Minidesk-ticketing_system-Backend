@@ -18,10 +18,9 @@ import SpaceMemberRepository from "../repositories/spaceMember.repository.js";
 import UserRepository from "../repositories/user.repository.js";
 import SpaceService from "./space.service.js";
 import { invalidateDashboardCache } from "./dashboard.service.js";
-
-// =============================================
-// Clear Space Ticket Cache
-// =============================================
+// import { enqueueEmail } from "../queues/email.queue.js";
+import { assertValidTransition } from "../validators/ticket.validator.js";
+import { decryptEmail } from "../utils/crypto.js";
 
 const clearSpaceTicketCache = async (spaceId) => {
   if (!spaceId) return;
@@ -155,18 +154,27 @@ export const update = async (id, data, user) => {
     throw new Error("Ticket not found");
   }
 
-  if (data.assigneeId) {
-    const member = await SpaceMemberRepository.findByUser(
+  const assigneeChanged =
+    data.assigneeId !== undefined &&
+    String(data.assigneeId ?? "") !== String(ticket.assigneeId ?? "");
+  let nextAssignee = null;
+
+  if (assigneeChanged) {
+    nextAssignee = data.assigneeId
+      ? await UserRepository.findById(data.assigneeId)
+      : null;
+
+    if (!nextAssignee) {
+      throw new Error("Assigned user must be a valid user.");
+    }
+
+    const assigneeMember = await SpaceMemberRepository.findByUser(
       ticket.spaceId,
       data.assigneeId,
     );
 
-    if (!member) {
+    if (!assigneeMember) {
       throw new Error("Assigned user must be a member of this space.");
-    }
-
-    if (!["admin", "agent"].includes(member.role)) {
-      throw new Error("Ticket can only be assigned to an admin or agent.");
     }
   }
 
@@ -183,7 +191,10 @@ export const update = async (id, data, user) => {
         : data.dueDate,
   };
 
-  if (data.description !== undefined && data.description !== ticket.description) {
+  if (
+    data.description !== undefined &&
+    data.description !== ticket.description
+  ) {
     changes.push({
       action: "description_updated",
       field: "description",
@@ -219,20 +230,15 @@ export const update = async (id, data, user) => {
     });
   }
 
-  if (data.assigneeId !== undefined) {
+  if (assigneeChanged) {
     const oldAssignee = ticket.assignee?.name || null;
-    const nextAssignee = data.assigneeId
-      ? await UserRepository.findById(data.assigneeId)
-      : null;
     const newAssignee = nextAssignee?.name || null;
-    if (String(data.assigneeId || "") !== String(ticket.assigneeId || "")) {
-      changes.push({
-        action: "assigned",
-        field: "assigneeId",
-        oldValue: oldAssignee,
-        newValue: newAssignee,
-      });
-    }
+    changes.push({
+      action: "assigned",
+      field: "assigneeId",
+      oldValue: oldAssignee,
+      newValue: newAssignee,
+    });
   }
 
   if (data.startDate !== undefined) {
@@ -260,7 +266,9 @@ export const update = async (id, data, user) => {
   }
 
   const oldStatus = ticket.status;
-
+  if (data.status && data.status !== oldStatus) {
+    assertValidTransition(oldStatus, data.status, user.role);
+  }
   const updatedTicket = await updateTicket(id, normalizedData);
 
   if (data.status && oldStatus !== data.status) {
@@ -273,9 +281,9 @@ export const update = async (id, data, user) => {
           ? "ticket_closed"
           : data.status === "resolved"
             ? "ticket_resolved"
-          : data.status === "reopened"
-            ? "ticket_reopened"
-            : "status_changed",
+            : data.status === "reopened"
+              ? "ticket_reopened"
+              : "status_changed",
       field: "status",
       oldValue: oldStatus,
       newValue: data.status,
@@ -283,6 +291,57 @@ export const update = async (id, data, user) => {
     });
   }
 
+  // after status change activity log:
+  if (data.status === "resolved") {
+    await n8nService.ticketResolved({
+      ticketId: ticket.id,
+      ticketKey: ticket.ticketKey,
+    });
+    // await enqueueEmail("ticket_resolved", {
+    //   to: ticket.requester?.email,
+    //   ticketKey: ticket.ticketKey,
+    // });
+  }
+
+  // after the assigneeId change detection:
+  if (assigneeChanged) {
+    console.log("Triggering ticketAssigned webhook...", {
+      ticketId: updatedTicket.id,
+      assigneeId: nextAssignee.id,
+      spaceId: ticket.space?.id || ticket.spaceId,
+    });
+
+    await n8nService.ticketAssigned({
+      ticketId: updatedTicket.id,
+      ticketKey: updatedTicket.ticketKey,
+      title: updatedTicket.title,
+      description: updatedTicket.description,
+      priority: updatedTicket.priority,
+      status: updatedTicket.status,
+      dueDate: updatedTicket.dueDate,
+      space: {
+        id: ticket.space?.id || ticket.spaceId,
+        key: ticket.space?.key,
+        name: ticket.space?.name,
+      },
+      assignee: {
+        id: nextAssignee.id,
+        name: nextAssignee.name,
+        email: decryptEmail(nextAssignee.email_cipher),
+      },
+      assignedBy: {
+        id: user.id,
+        name: user.name,
+        email: user.email_cipher ? decryptEmail(user.email_cipher) : undefined,
+      },
+    });
+
+    // await enqueueEmail("ticket_assigned", {
+    //   to: decryptEmail(nextAssignee.email_cipher),
+    //   ticketKey: updatedTicket.ticketKey,
+    //   title: updatedTicket.title,
+    // });
+  }
   for (const change of changes) {
     await activityService.createActivity({
       ticketId: ticket.id,

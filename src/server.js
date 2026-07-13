@@ -8,6 +8,11 @@ import "./config/redis.js";
 import "./models/Tag.js";
 import "./models/TicketTag.js";
 import "./models/index.js";
+// import "./workers/email.worker.js";
+// import "./workers/escalation.worker.js";
+// import { scheduleEscalationSweep } from "./queues/escalation.queue.js";
+
+// inside startServer(), after app.listen:
 
 const PORT = process.env.PORT || 5000;
 
@@ -23,6 +28,8 @@ async function startServer() {
     app.listen(PORT, () => {
       console.log(` Server running on port ${PORT}`);
     });
+    // await scheduleEscalationSweep();
+    // console.log("✅ BullMQ workers running, escalation sweep scheduled");
   } catch (error) {
     console.error(error);
   }
